@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebDraw // BLOOD CANVAS</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+
+  <!-- ====== СТАРТОВЫЙ ДИАЛОГ НАСТРОЙКИ ХОЛСТА ====== -->
+  <div id="setup-overlay" class="overlay">
+    <div class="setup-panel">
+      <h1 class="logo">WEB<span class="accent">DRAW</span></h1>
+      <p class="subtitle">// настрой свой холст перед резней красок</p>
+
+      <div class="field-row">
+        <label>Ширина (px)</label>
+        <input type="number" id="setup-width" value="800" min="50" max="4000" />
+      </div>
+      <div class="field-row">
+        <label>Высота (px)</label>
+        <input type="number" id="setup-height" value="600" min="50" max="4000" />
+      </div>
+      <div class="field-row">
+        <label>Цвет фона</label>
+        <input type="color" id="setup-bgcolor" value="#ffffff" />
+      </div>
+
+      <button id="setup-confirm" class="btn-primary">СОЗДАТЬ ХОЛСТ</button>
+    </div>
+  </div>
+
+  <!-- ====== ОСНОВНОЙ ИНТЕРФЕЙС ====== -->
+  <div id="app" class="app hidden">
+
+    <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
+    <header class="topbar">
+      <h1 class="logo small">WEB<span class="accent">DRAW</span></h1>
+
+      <div class="topbar-group">
+        <button id="undo-btn" class="btn-icon" title="Отмена (до 3 шагов)">↶ UNDO</button>
+        <button id="redo-btn" class="btn-icon" title="Повтор">↷ REDO</button>
+      </div>
+
+      <div class="topbar-group">
+        <button id="save-jpeg-btn" class="btn-icon accent-bg" title="Сохранить как JPEG">💾 JPEG</button>
+        <button id="save-project-btn" class="btn-icon" title="Сохранить проект (.sdp)">📁 SAVE .sdp</button>
+        <label class="btn-icon file-btn" title="Загрузить проект (.sdp)">
+          📂 LOAD .sdp
+          <input type="file" id="load-project-input" accept=".sdp,.txt" hidden />
+        </label>
+      </div>
+    </header>
+
+    <div class="main-layout">
+
+      <!-- ЛЕВАЯ ПАНЕЛЬ: ИНСТРУМЕНТЫ -->
+      <aside class="panel tools-panel">
+        <h2 class="panel-title">ИНСТРУМЕНТЫ</h2>
+        <div class="tool-grid">
+          <button class="tool-btn active" data-tool="brush" title="Кисть">🖌️<span>Кисть</span></button>
+          <button class="tool-btn" data-tool="shape" title="Фигуры">🔺<span>Фигуры</span></button>
+          <button class="tool-btn" data-tool="stamp" title="Штамп">🪄<span>Штамп</span></button>
+          <button class="tool-btn" data-tool="bucket" title="Заливка">🪣<span>Заливка</span></button>
+          <button class="tool-btn" data-tool="move" title="Перемещение (Ctrl)">✋<span>Move</span></button>
+        </div>
+
+        <!-- НАСТРОЙКИ КИСТИ -->
+        <div class="tool-options" id="brush-options">
+          <h3>Размер кисти</h3>
+          <div class="size-row">
+            <button class="size-btn active" data-size="2">S</button>
+            <button class="size-btn" data-size="6">M</button>
+            <button class="size-btn" data-size="14">L</button>
+          </div>
+          <p class="hint">Shift + drag = прямая линия</p>
+        </div>
+
+        <!-- НАСТРОЙКИ ФИГУР -->
+        <div class="tool-options hidden" id="shape-options">
+          <h3>Тип фигуры</h3>
+          <select id="shape-type">
+            <option value="rect">Прямоугольник</option>
+            <option value="oval">Овал</option>
+            <option value="polygon">Многоугольник</option>
+            <option value="star">Звезда</option>
+          </select>
+
+          <div id="polygon-options" class="hidden sub-options">
+            <label>Сторон: <input type="number" id="polygon-sides" min="3" value="5" /></label>
+          </div>
+
+          <div id="star-options" class="hidden sub-options">
+            <label>Вершин: <input type="number" id="star-points" min="3" value="5" /></label>
+            <label>R1 <input type="range" id="star-r1" min="10" max="100" value="100" /></label>
+            <label>R2 <input type="range" id="star-r2" min="5" max="100" value="40" /></label>
+          </div>
+
+          <h3>Заливка фигуры</h3>
+          <div class="size-row">
+            <button class="fillmode-btn active" data-fillmode="filled">Залита</button>
+            <button class="fillmode-btn" data-fillmode="outline">Контур</button>
+          </div>
+          <p class="hint">Shift = правильная форма / квадрат / круг</p>
+        </div>
+
+        <!-- НАСТРОЙКИ ШТАМПА -->
+        <div class="tool-options hidden" id="stamp-options">
+          <h3>Шаблон штампа</h3>
+          <div class="stamp-grid">
+            <button class="stamp-btn active" data-stamp="star">★</button>
+            <button class="stamp-btn" data-stamp="heart">♥</button>
+            <button class="stamp-btn" data-stamp="skull">☠</button>
+            <button class="stamp-btn" data-stamp="bolt">⚡</button>
+            <button class="stamp-btn" data-stamp="custom" id="stamp-custom-btn">+</button>
+          </div>
+          <label class="btn-icon file-btn small">
+            Свой шаблон
+            <input type="file" id="custom-stamp-input" accept="image/*" hidden />
+          </label>
+          <img id="custom-stamp-preview" class="hidden" />
+        </div>
+
+        <!-- НОВЫЙ СЛОЙ -->
+        <button id="new-layer-btn" class="btn-primary full">+ НОВЫЙ СЛОЙ</button>
+      </aside>
+
+      <!-- ЦЕНТР: ХОЛСТ -->
+      <main class="canvas-area" id="canvas-area">
+        <div class="canvas-wrapper" id="canvas-wrapper">
+          <canvas id="main-canvas"></canvas>
+          <canvas id="overlay-canvas"></canvas>
+        </div>
+      </main>
+
+      <!-- ПРАВАЯ ПАНЕЛЬ -->
+      <aside class="panel right-panel">
+
+        <!-- ЦВЕТА -->
+        <section class="color-section">
+          <h2 class="panel-title">ЦВЕТА</h2>
+
+          <div class="color-tabs">
+            <button class="color-tab active" data-target="brush">Кисть</button>
+            <button class="color-tab" data-target="fill">Заливка</button>
+          </div>
+
+          <div class="color-current">
+            <div class="swatch-big" id="current-brush-swatch" style="background:#000000"></div>
+            <input type="color" id="brush-color-input" value="#000000" />
+          </div>
+          <div class="color-current hidden" id="fill-color-block">
+            <div class="swatch-big" id="current-fill-swatch" style="background:#ff0000"></div>
+            <input type="color" id="fill-color-input" value="#ff0000" />
+          </div>
+
+          <h3>Палитра</h3>
+          <div class="palette-tabs">
+            <button class="palette-tab active" data-palette="0">Кровь</button>
+            <button class="palette-tab" data-palette="1">Тьма</button>
+            <button class="palette-tab" data-palette="2">Неон</button>
+          </div>
+          <div class="palette-grid" id="palette-grid"></div>
+
+          <h3>Часто используемые</h3>
+          <div class="palette-grid" id="recent-grid"></div>
+        </section>
+
+        <!-- СЛОИ -->
+        <section class="layers-section">
+          <h2 class="panel-title">СЛОИ</h2>
+          <div class="layers-list" id="layers-list"></div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
